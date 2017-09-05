@@ -3,13 +3,28 @@ import { Text, View, StyleSheet, Button } from 'react-native';
 
 export default class Repository extends React.Component {
   renderStarToggle() {
-    return <Button title="Star" />;
+    if( this.props.repository.viewerHasStarred){
+      return(
+        <Button
+          title="Unstar"
+          onPress={()=> this.handleToggleStar('removeStar')}
+        />
+      );
+    } else {
+      return (
+        <Button
+          tittle="Star" onPress={()=> this.handleToggleStar('addStar')}
+        />
+      )
+    }
   }
 
   render() {
     return (
       <View style={styles.container}>
-        <Text style={styles.text}>fake/fake-repository</Text>
+        <Text style={styles.text}>
+          {this.props.repository.nameWithOwner}
+        </Text>
         {this.renderStarToggle()}
       </View>
     );
