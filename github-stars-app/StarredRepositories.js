@@ -7,7 +7,40 @@ class StarredRepositories extends React.Component {
   static navigationOptions = {
     title: 'Starred repositories',
   };
-
+  loadMoreEntries = () => {
+    // Don't repeat it when loading
+    if (!this.props.data.loading) {
+      const viewer = this.props.data.viewer;
+      // if there is no more data, do nothing
+      if (!viewer.starredRepositories.pageInfo.hasNextPage) {
+        return;
+      }
+      return this.props.data.fetchMore({
+        query: StarredQuery,
+        variables: {
+          // pass current last cursor
+          cursor: viewer.starredRepositories.pageInfo.endCursor,
+        },
+        updateQuery: (previousResult, { fetchMoreResult }) => {
+          const newItems = fetchMoreResult.viewer.starredRepositories.nodes;
+          return {
+            // return the update set
+            viewer: {
+              ...fetchMoreResult.viewer,
+              starredRepositories: {
+                ...fetchMoreResult.viewer.starredRepositories,
+                // append newly received items to the old ones
+                nodes: [
+                  ...previousResult.viewer.starredRepositories.nodes,
+                  ...newItems,
+                ],
+              },
+            },
+          };
+        },
+      });
+    }
+  };
   render() {
     if(this.props.data.loading) {
       return <LoadingScreen />;
@@ -17,6 +50,9 @@ class StarredRepositories extends React.Component {
       return (
         <ListOfRepositories 
           repositories={this.props.data.viewer.starredRepositories}
+          onLoadMore={this.loadMoreEntries}
+          onRefresh={()=>this.props.data.refetch({first: 20})}
+          refreshing={this.props.data.loading}
           />
       );
     }
@@ -25,15 +61,20 @@ class StarredRepositories extends React.Component {
 }
 
 const StarredQuery = gql`
-  query {
+  query( $cursor: String) {
     viewer {
       login
       name
-      starredRepositories(first: 10) {
+      starredRepositories(first: 10, after: $cursor) {
+        totalCount
         nodes {
           id
           nameWithOwner
           viewerHasStarred
+        }
+        pageInfo {
+          endCursor
+          hasNextPage
         }
       }
     }
